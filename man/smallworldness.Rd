@@ -23,7 +23,19 @@ Calculate small-world coefficient
 }
 \examples{
 \donttest{
-#set reps at least 99 when you run.
-smallworldness(co_net, reps=9)
+# set reps at least 99 when you run.
+smallworldness(co_net, reps = 9)
 }
 }
+\seealso{
+Other topological: 
+\code{\link{extract_sub_net}()},
+\code{\link{fit_power}()},
+\code{\link{get_group_skeleton}()},
+\code{\link{links_stat}()},
+\code{\link{nc}()},
+\code{\link{net_par}()},
+\code{\link{rand_net_par}()},
+\code{\link{rand_net}()}
+}
+\concept{topological}

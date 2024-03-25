@@ -2,7 +2,7 @@
 % Please edit documentation in R/plot.R
 \name{as_polyarc}
 \alias{as_polyarc}
-\title{Layout as a poly_arc}
+\title{Layout as a polyarc}
 \usage{
 as_polyarc(n = 3, space = pi/3)
 }
@@ -15,8 +15,18 @@ as_polyarc(n = 3, space = pi/3)
 A two-column matrix, each row giving the coordinates of a vertex, according to the ids of the vertex ids.
 }
 \description{
-Layout as a poly_arc
+Layout as a polyarc
 }
 \examples{
 as_polyarc()(co_net)
 }
+\seealso{
+Other layout: 
+\code{\link{as_arc}()},
+\code{\link{as_circle_tree}()},
+\code{\link{as_line}()},
+\code{\link{as_polycircle}()},
+\code{\link{as_polygon}()},
+\code{\link{c_net_layout}()}
+}
+\concept{layout}

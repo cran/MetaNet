@@ -1,9 +1,9 @@
 Package: MetaNet
 Type: Package
 Title: Network Analysis for Omics Data
-Version: 0.1.0
+Version: 0.1.2
 Authors@R: 
-    person("Peng", "Chen",email ="pengchen2001@zju.edu.cn", role = c("aut", "cre"), comment = c(ORCID = "0000-0002-9449-7606"))
+    person("Chen", "Peng", email ="pengchen2001@zju.edu.cn", role = c("aut", "cre"), comment = c(ORCID = "0000-0002-9449-7606"))
 Description: Comprehensive network analysis package.
     Calculate correlation network fastly, accelerate lots of analysis by parallel computing.
     Support for multi-omics data, search sub-nets fluently.
@@ -15,20 +15,20 @@ Encoding: UTF-8
 RoxygenNote: 7.2.3
 Depends: R (>= 4.1.0), igraph (>= 1.3.5)
 LazyData: true
-Imports: graphics, dplyr, ggplot2 (>= 3.2.0), grDevices, magrittr,
-        reshape2, stats, tibble, utils, pcutils, vegan, rlang, stringr
-Suggests: pheatmap, foreach, doSNOW, snow, ggrepel, ggpubr,
-        RColorBrewer, knitr, rmarkdown, prettydoc, Hmisc, gifski,
-        ggnewscale, ggraph, networkD3, ggpmisc, ggtree, treeio,
-        circlize
+Imports: graphics, dplyr, ggplot2 (>= 3.2.0), ggnewscale, ggrepel,
+        RColorBrewer, grDevices, magrittr, reshape2, stats, tibble,
+        utils, pcutils (>= 0.2.5), rlang
+Suggests: pheatmap, vegan, stringr, foreach, doSNOW, snow, knitr,
+        rmarkdown, prettydoc, Hmisc, gifski, ggraph, networkD3,
+        ggpmisc, ggtree, treeio, circlize, ggpubr
 VignetteBuilder: knitr
 BugReports: https://github.com/Asa12138/MetaNet/issues
 URL: https://github.com/Asa12138/MetaNet
 ByteCompile: true
 biocViews: DataImport, Network analysis, Omics, Software, Visualization
 NeedsCompilation: no
-Packaged: 2024-01-11 15:57:00 UTC; asa
-Author: Peng Chen [aut, cre] (<https://orcid.org/0000-0002-9449-7606>)
-Maintainer: Peng Chen <pengchen2001@zju.edu.cn>
+Packaged: 2024-03-21 16:16:27 UTC; asa
+Author: Chen Peng [aut, cre] (<https://orcid.org/0000-0002-9449-7606>)
+Maintainer: Chen Peng <pengchen2001@zju.edu.cn>
 Repository: CRAN
-Date/Publication: 2024-01-12 09:20:03 UTC
+Date/Publication: 2024-03-25 20:40:07 UTC
