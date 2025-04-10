@@ -83,6 +83,40 @@ cbind_new <- \(df, df1){
   cbind(df[, la, drop = FALSE], df1)
 }
 
+twocol2vector <- \(df){
+  if (ncol(df) < 2) {
+    return(NULL)
+  }
+  if (!e_match(df, test = 1)) {
+    stop("The columns are not one-to-one correspondence.")
+  }
+  df <- dplyr::distinct_all(df)
+  setNames(df[, 2], df[, 1])
+}
+
+custom_sort <- function(x) {
+  # 尝试将字符转换为数字并排序
+  converted <- suppressWarnings(as.numeric(x))
+  if (!any(is.na(converted))) {
+    # 如果转换成功，则返回按数字排序的结果
+    return(converted[order(converted)])
+  } else {
+    # 如果转换失败，则返回按字符排序的结果
+    return(stringr::str_sort(x, numeric = TRUE))
+  }
+}
+
+paste_df <- function(df, collapse = ",") {
+  apply(df, 1, paste, collapse = collapse)
+}
+
+paste_df2pielist <- function(df, collapse = ",") {
+  pcutils::strsplit2(df, split = collapse) %>%
+    pcutils::t2() %>%
+    as.list() %>%
+    lapply(function(x) as.numeric(x))
+}
+
 deprecated <- function(old, new) {
   assign(old, new, envir = asNamespace(packageName()))
 }

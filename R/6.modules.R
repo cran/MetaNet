@@ -45,7 +45,7 @@ module_net <- function(module_number = 3, n_node_in_module = 30,
 
   g <- igraph::graph.adjacency(mat, mode = "undirected")
   # plot(g)
-  c_net_update(g) -> g1
+  c_net_update(g, initialize = TRUE, verbose = FALSE) -> g1
   g1 <- module_detect(g1)
   g1 <- to_module_net(g1)
   g1
@@ -67,10 +67,12 @@ module_net <- function(module_number = 3, n_node_in_module = 30,
 #' module_detect(co_net) -> co_net_modu
 module_detect <- function(go, method = "cluster_fast_greedy", n_node_in_module = 0, delete = FALSE) {
   stopifnot(is_igraph(go))
+  if (!is_metanet(go)) go <- c_net_update(go, initialize = TRUE, verbose = FALSE)
+
   if ("original_module" %in% vertex_attr_names(go)) message("'module' already exsited, start a new module detection!")
   ms <- c("cluster_walktrap", "cluster_edge_betweenness", "cluster_fast_greedy", "cluster_spinglass")
   method <- match.arg(method, ms)
-  if ("weight" %in% graph_attr_names(go)) E(go)$weight <- abs(igraph::E(go)$weight)
+  if ("weight" %in% edge_attr_names(go)) E(go)$weight <- abs(igraph::E(go)$weight)
 
   switch(method,
     "cluster_walktrap" = {
@@ -92,8 +94,10 @@ module_detect <- function(go, method = "cluster_fast_greedy", n_node_in_module =
   V(go)$module <- igraph::membership(wc) %>% as.character()
   V(go)$original_module <- V(go)$module
 
-  go <- filter_n_module(go, n_node_in_module = n_node_in_module, delete = delete)
-  go <- c_net_update(go)
+  if (n_node_in_module > 0) {
+    go <- filter_n_module(go, n_node_in_module = n_node_in_module, delete = delete)
+    go <- c_net_update(go, initialize = TRUE, verbose = FALSE)
+  }
 
   graph_attr(go)$communities <- wc
   graph_attr(go)$modularity <- modularity(wc)
@@ -159,19 +163,32 @@ combine_n_module <- function(go_m, module_number = 5) {
 
 #' Transformation a network to a module network
 #'
+#' @param edge_type "module", "module_from", "module_to"
 #' @param go metanet
+#'
 #' @export
 #' @family module
 #' @return metanet with modules
-to_module_net <- function(go) {
+to_module_net <- function(go, edge_type = c("module", "module_from", "module_to")[1]) {
   if (!"module" %in% vertex_attr_names(go)) stop("no 'module', please `module_detect()` first or set the V(net)$module.")
+  edge_type <- match.arg(edge_type, c("module", "module_from", "module_to"))
   go <- anno_edge(go, get_v(go)[, c("name", "module")], verbose = FALSE)
+
   tmp_e <- igraph::edge.attributes(go)
-  E(go)$e_type <- ifelse(tmp_e$module_from == tmp_e$module_to, "intra-module", "inter-module")
+  if (edge_type == "module") {
+    E(go)$e_type <- ifelse(tmp_e$module_from == tmp_e$module_to, "intra-module", "inter-module")
+  } else if (edge_type == "module_from") {
+    E(go)$e_type <- tmp_e$module_from
+  } else if (edge_type == "module_to") {
+    E(go)$e_type <- tmp_e$module_to
+  }
+
   # 刷新颜色
   # go=delete_edge_attr(go,"color")
-  go <- c_net_set(go, vertex_class = "module")
+  V(go)$v_class <- V(go)$module
+  go <- c_net_update(go, initialize = TRUE, verbose = FALSE)
   V(go)$color <- ifelse(V(go)$module == "others", "grey", V(go)$color)
+
   n_mod <- unique(V(go)$module)
   igraph::graph.attributes(go)$n_type <- "module"
   igraph::graph.attributes(go)$n_modules <- length(n_mod[n_mod != "others"])
@@ -225,7 +242,7 @@ get_module_eigen <- function(go_m) {
 #' summary_module(co_net_modu, var = "Abundance", module = "module")
 summary_module <- function(go_m, var = "v_class", module = "module", ...) {
   tmp_v <- get_v(go_m)
-  if ((length(module) > 1) | (length(var) > 1)) stop("var or module should be one column!")
+  if ((length(module) > 1) || (length(var) > 1)) stop("var or module should be one column!")
   a <- tmp_v %>% dplyr::select(!!module, !!var)
   colnames(a)[1] <- "module"
 
@@ -389,16 +406,20 @@ module_expression <- function(go_m, totu, group = NULL, r_threshold = 0.6,
 #' data("c_net")
 #' module_detect(co_net) -> co_net_modu
 #' zp_analyse(co_net_modu) -> co_net_modu
-#' if (requireNamespace("ggrepel")) {
-#'   zp_plot(co_net_modu)
-#'   zp_plot(co_net_modu, mode = 3)
-#' }
+#' zp_plot(co_net_modu)
+#' zp_plot(co_net_modu, mode = 3)
+#'
 zp_analyse <- function(go_m, mode = 2, use_origin = TRUE) {
   go_m -> go1
   v_index <- get_v(go_m)
   if (!"module" %in% names(v_index)) stop("no modules, please `module_detect()` first")
   if ("roles" %in% names(v_index)) message("areadly has roles, overwrite!")
 
+  if (!"original_module" %in% names(v_index)) {
+    if (use_origin) {
+      use_origin <- FALSE
+    }
+  }
   # use original_module to do zp_analyse
   if (use_origin) {
     {
@@ -440,8 +461,11 @@ zp_analyse <- function(go_m, mode = 2, use_origin = TRUE) {
     )
   }
   deter_role <- \(x, y, backs = backs){
-    for (i in 1:nrow(backs)) {
-      if (dplyr::between(as.numeric(x), backs$x1[i], backs$x2[i]) & dplyr::between(as.numeric(y), backs$y1[i], backs$y2[i])) {
+    for (i in seq_len(nrow(backs))) {
+      flag <- dplyr::between(as.numeric(x), backs$x1[i], backs$x2[i]) && dplyr::between(as.numeric(y), backs$y1[i], backs$y2[i])
+      if (is.na(flag)) {
+        return(NA)
+      } else if (flag) {
         # if((backs$x1[i]<=x)&(backs$x2[i]>=x)&(backs$y1[i]<=y)&(backs$y2[i]>=y)){
         role <- backs$lab[i]
         break
@@ -455,7 +479,16 @@ zp_analyse <- function(go_m, mode = 2, use_origin = TRUE) {
   return(go_m)
 }
 
-# calculate Zi
+
+#' calculate Zi
+#'
+#' @param g igraph object
+#' @param A adjacency matrix
+#' @param weighted logical, default: FALSE
+#'
+#' @return within_module_deg_z_score
+#' @noRd
+#' @references https://github.com/cwatson/brainGraph/blob/master/R/vertex_roles.R
 within_module_deg_z_score <- function(g, A = NULL, weighted = FALSE) {
   stopifnot(is_igraph(g))
   if (is.null(A)) {
@@ -465,7 +498,7 @@ within_module_deg_z_score <- function(g, A = NULL, weighted = FALSE) {
       A <- as_adj(g, sparse = FALSE, names = TRUE)
     }
   }
-  memb <- vertex_attr(g, "module")
+  memb <- vertex_attr(g, "module") %>% as.numeric()
   N <- max(memb)
   nS <- tabulate(memb)
   z <- Ki <- rep.int(0, dim(A)[1L])
@@ -495,15 +528,15 @@ part_coeff <- function(g, A = NULL, weighted = FALSE) {
       A <- as_adj(g, sparse = FALSE)
     }
   }
-  memb <- vertex_attr(g, "module")
+  memb <- vertex_attr(g, "module") %>% as.numeric()
   Ki <- colSums(A)
-  N <- max(memb)
   Kis <- t(rowsum(A, memb))
   Pi <- 1 - ((1 / Ki^2) * rowSums(Kis^2))
   names(Pi) <- rownames(A)
   Pi <- data.frame(Pi)
   return(Pi)
 }
+
 
 #' Zi-Pi plot of vertexes
 #'
@@ -566,12 +599,14 @@ zp_plot <- function(go, label = TRUE, mode = 1) {
     MetaNet_theme +
     guides(colour = "none") +
     theme(strip.background = element_rect(fill = "white")) +
-    xlab("Participation Coefficient") +
-    ylab("Within-module connectivity z-score")
+    xlab("Participation Coefficient (Pi)") +
+    ylab("Within-module connectivity (Zi)")
 
   if (label) {
+    label_dat <- taxa.roles[!taxa.roles$roles %in% c("Peripherals", "Ultra-peripherals"), ]
+    label_dat <- label_dat[!is.na(label_dat$roles), ]
     p <- p + ggrepel::geom_text_repel(
-      data = taxa.roles[!taxa.roles$roles %in% c("Peripherals", "Ultra-peripherals"), ],
+      data = label_dat,
       aes(x = Pi, y = Zi, label = name), size = 3
     )
   }
